@@ -1,4 +1,5 @@
 // Customer advances sent to ZATCA as advance invoices (386) and their refunds (381).
+// An advance carries VAT, or is marked zero-rated / exempt / out of scope, or is split by category.
 // Buttons only show for companies with "Send customer advance Payment Entries to ZATCA".
 frappe.ui.form.on("Payment Entry", {
 	refresh(frm) {
@@ -11,7 +12,12 @@ frappe.ui.form.on("Payment Entry", {
 
 				const sent = ["CLEARED", "REPORTED"].includes(frm.doc.custom_zatca_status);
 				const has_vat = (frm.doc.taxes || []).length > 0;
-				const is_advance = frm.doc.payment_type === "Receive" && has_vat;
+				const has_split = (frm.doc.custom_zatca_advance_lines || []).length > 0;
+				const no_vat_category =
+					!!frm.doc.custom_zatca_tax_category &&
+					frm.doc.custom_zatca_tax_category !== "Standard";
+				const is_advance =
+					frm.doc.payment_type === "Receive" && (has_vat || has_split || no_vat_category);
 				const is_refund =
 					frm.doc.payment_type === "Pay" && !!frm.doc.custom_advance_refund_against;
 
@@ -19,6 +25,11 @@ frappe.ui.form.on("Payment Entry", {
 					frm.dashboard.set_headline_alert(
 						__("ZATCA: {0}", [frm.doc.custom_zatca_status]),
 						"green"
+					);
+				} else if (is_advance || is_refund) {
+					frm.dashboard.set_headline_alert(
+						__("Not sent to ZATCA yet. This is not a valid tax invoice. Click Send to ZATCA."),
+						"red"
 					);
 				}
 
@@ -50,3 +61,23 @@ frappe.ui.form.on("Payment Entry", {
 			});
 	},
 });
+
+// Split by VAT category: show each row's VAT as it is typed (the server recomputes it).
+frappe.ui.form.on("ZATCA Advance Line", {
+	tax_category(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		frappe.model.set_value(cdt, cdn, "rate", row.tax_category === "Standard" ? 15 : 0);
+	},
+	amount(frm, cdt, cdn) {
+		set_line_vat(cdt, cdn);
+	},
+	rate(frm, cdt, cdn) {
+		set_line_vat(cdt, cdn);
+	},
+});
+
+function set_line_vat(cdt, cdn) {
+	const row = locals[cdt][cdn];
+	const vat = row.tax_category === "Standard" ? flt((row.amount * row.rate) / 100, 2) : 0;
+	frappe.model.set_value(cdt, cdn, "tax_amount", vat);
+}
