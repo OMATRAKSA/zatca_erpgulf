@@ -32,6 +32,8 @@ scheduler_events = {
 doc_events = {
     "Sales Invoice": {
         # "before_insert":"zatca_erpgulf.zatca_erpgulf.sales_invoice_hooks.set_draft_series",
+        "before_validate": "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.before_validate_sales_invoice",
+        "validate": "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.validate_sales_invoice",
         "before_cancel": [
             "zatca_erpgulf.zatca_erpgulf.validations.before_save",
             "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.cancel_advance_vat_reversal",
@@ -51,8 +53,13 @@ doc_events = {
     "Payment Entry": {
         "before_validate": "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.before_validate_payment_entry",
         "validate": "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.validate_payment_entry",
+        "before_submit": "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.before_submit_payment_entry",
         "on_submit": "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.on_submit_payment_entry",
+        "before_update_after_submit": "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.before_update_after_submit_payment_entry",
         "before_cancel": "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.before_cancel_payment_entry",
+    },
+    "Journal Entry": {
+        "before_cancel": "zatca_erpgulf.zatca_erpgulf.payment_entry_advance.before_cancel_journal_entry",
     },
     "POS Invoice": {
         "before_cancel": "zatca_erpgulf.zatca_erpgulf.validations.before_save",
